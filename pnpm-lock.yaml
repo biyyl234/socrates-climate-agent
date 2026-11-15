@@ -44,6 +44,9 @@ importers:
 
   apps/avatar:
     dependencies:
+      '@jannchie/pixi-live2d-display':
+        specifier: 1.4.0
+        version: 1.4.0(pixi.js@8.23.0)
       '@socrates/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -415,6 +418,11 @@ packages:
   '@humanwhocodes/object-schema@2.0.3':
     resolution: {integrity: sha512-93zYdMES/c1D69yZiKDBj0V24vqNzB/koF26KPaagAfd3P/4gUlh3Dys5ogAK+Exi9QyzlD8x/08Zt7wIKcDcA==}
     deprecated: Use @eslint/object-schema instead
+
+  '@jannchie/pixi-live2d-display@1.4.0':
+    resolution: {integrity: sha512-Qgg27x+psxB6nSxDbhtSgv4Caoxjir9iv4nBi+BH5XdD4AkyxNgm+wPP0UJjLXun0NFc55dmGTZfyPtVLTxevw==}
+    peerDependencies:
+      pixi.js: ^8.0.0
 
   '@jridgewell/sourcemap-codec@1.6.0':
     resolution: {integrity: sha512-T7jf+5zgsZHwNJ4lvQ7/aezbyk0nNX+zJVWpmHA7VYsEx7a7qr5Rg5IbtJFqkgze5Y2sruq1RUY8Q837Od7iFw==}
@@ -1505,6 +1513,10 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/object-schema@2.0.3': {}
+
+  '@jannchie/pixi-live2d-display@1.4.0(pixi.js@8.23.0)':
+    dependencies:
+      pixi.js: 8.23.0
 
   '@jridgewell/sourcemap-codec@1.6.0': {}
 
