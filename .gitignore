@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+.expo/
+dist-export/
+web-build/
+
+# Secrets / env (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+supabase/.temp/
+.vercel/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Native / EAS
+*.apk
+*.aab
+!**/fixtures/**/*.apk
+ios/
+android/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Test & coverage
+coverage/
+.vitest/
+
+# Deno
+.deno/
