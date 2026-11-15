@@ -7,12 +7,29 @@
     "start": "expo start",
     "android": "expo run:android",
     "web": "expo start --web",
+    "export:web": "expo export -p web",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"app/**/*.ts\" \"app/**/*.tsx\"",
     "test": "vitest run"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@socrates/core": "workspace:*",
-    "@socrates/data": "workspace:*"
+    "@socrates/data": "workspace:*",
+    "expo": "58.0.25",
+    "expo-router": "~58.0.31",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-web": "^0.21.4",
+    "react-native-webview": "14.0.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "^5.7.3"
   }
 }

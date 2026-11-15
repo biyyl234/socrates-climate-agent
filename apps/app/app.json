@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Socrates",
+    "slug": "socrates",
+    "version": "0.1.0",
+    "scheme": "socrates",
+    "description": "校园生活方式碳素养陪伴应用（MI 对话 · 确定性 LCA · 虚拟人）",
+    "platforms": ["web", "android", "ios"],
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "web": {
+      "output": "static",
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": { "supportsTablet": true },
+    "android": {
+      "package": "org.socrates.app",
+      "adaptiveIcon": { "backgroundColor": "#2F5D50" }
+    }
+  }
+}

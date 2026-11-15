@@ -33,6 +33,9 @@ function encodingFor(format: TtsFormat): string {
   return format === "audio/wav" ? "wav" : "mp3";
 }
 
+/** Real-time big-model TTS HTTP endpoint (single-shot query). */
+const DEFAULT_ENDPOINT = "https://openspeech.bytedance.com/api/v1/tts";
+
 export class VolcanoTts implements TtsAdapter {
   readonly provider = "volcano";
   readonly available = true;
@@ -100,21 +103,18 @@ export class VolcanoTts implements TtsAdapter {
     const voice = request.voice ?? this.config.voiceType;
     const sentences = this.splitBySentence(request.text);
 
-    if (!this.fetchImpl || !this.config.endpoint) {
-      throw new TtsError(
-        "unavailable",
-        "Volcano TTS upstream is not wired yet; credentials and endpoint are pending.",
-      );
-    }
+    const endpoint = this.config.endpoint ?? DEFAULT_ENDPOINT;
+    const fetchImpl = this.fetchImpl ?? fetch;
 
     const chunks = [];
     for (let i = 0; i < sentences.length; i += 1) {
       const payload = this.buildPayload(sentences[i]!, i + 1, format, request.sessionId);
-      const response = await this.fetchImpl(this.config.endpoint, {
+      const response = await fetchImpl(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.accessToken}`,
+          // Volcano auth scheme uses a semicolon: "Bearer;<access token>"
+          Authorization: `Bearer;${this.config.accessToken}`,
         },
         body: JSON.stringify(payload),
       });

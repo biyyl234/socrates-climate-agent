@@ -59,12 +59,39 @@ describe("VolcanoTts placeholder", () => {
     expect(mp3.audio.encoding).toBe("mp3");
   });
 
-  it("throws unavailable when the upstream endpoint is not wired", async () => {
+  it("calls the TTS endpoint with the Bearer; auth header and parses base64 audio", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return new Response(JSON.stringify({ code: 3000, data: "QUJDREVGRw==" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
     const tts = new VolcanoTts({
       appId: "app",
       accessToken: "tok",
       cluster: "volcano_tts",
       voiceType: "zh_male",
+      fetchImpl,
+    });
+    const result = await tts.synthesize({ text: "你好", format: "audio/mp3" });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("https://openspeech.bytedance.com/api/v1/tts");
+    const headers = calls[0]!.init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer;tok");
+    expect(result.chunks).toHaveLength(1);
+    expect(result.chunks[0]!.dataBase64).toBe("QUJDREVGRw==");
+  });
+
+  it("maps a non-ok upstream response to a TtsError", async () => {
+    const fetchImpl = (async () => new Response("nope", { status: 401 })) as unknown as typeof fetch;
+    const tts = new VolcanoTts({
+      appId: "app",
+      accessToken: "tok",
+      cluster: "volcano_tts",
+      voiceType: "zh_male",
+      fetchImpl,
     });
     await expect(tts.synthesize({ text: "你好" })).rejects.toThrow(TtsError);
   });
