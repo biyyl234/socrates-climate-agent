@@ -6,6 +6,7 @@
 import type { ChatRequest, SseEvent } from "@socrates/core";
 import type { CompareResult, FootprintResult } from "@socrates/data";
 import { backendUrl, ENDPOINTS, env } from "../config/env";
+import { getSelectedModelSync } from "./models";
 
 export class BackendError extends Error {
   constructor(
@@ -91,6 +92,8 @@ export async function streamChat(req: ChatRequest, handlers: SseHandlers): Promi
     headers.apikey = env.publishableKey;
     headers.Authorization = `Bearer ${env.publishableKey}`;
   }
+  const selectedModel = getSelectedModelSync();
+  if (selectedModel) headers["X-LLM-Model"] = selectedModel;
 
   let response: Response;
   try {

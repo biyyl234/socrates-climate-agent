@@ -28,7 +28,7 @@ const coreEntry = join(repoRoot, "packages", "core", "src", "index.ts");
 const dataEntry = join(repoRoot, "packages", "data", "src", "index.ts");
 const functionsRoot = join(supabasePkgDir, "supabase", "functions");
 
-const FUNCTIONS = ["chat", "tts", "product", "lca", "compare", "commitment"];
+const FUNCTIONS = ["chat", "tts", "models", "product", "lca", "compare", "commitment"];
 
 rmSync(functionsRoot, { recursive: true, force: true });
 mkdirSync(functionsRoot, { recursive: true });

@@ -10,6 +10,7 @@ build/
 *.tsbuildinfo
 .expo/
 dist-export/
+static-deploy/
 web-build/
 
 # Secrets / env (never commit)

@@ -32,6 +32,32 @@ export interface ToolDefinition {
   result_schema: JsonSchema;
 }
 
+/** Valid internal category ids (mirrors the data package CategoryId enum). */
+const CATEGORY_ID_ENUM = [
+  "bottled_water",
+  "beverage",
+  "meal_beef",
+  "meal_veggie",
+  "snack",
+  "snack_packaging",
+  "express_packaging",
+  "other",
+];
+
+/** Attribute keys the deterministic engine understands (geography drives factor selection). */
+const ATTRIBUTES_SCHEMA: JsonSchema = {
+  type: "object",
+  description:
+    "产品/餐食属性。引擎只读取 geography（ISO 国家/地区码，如 CN、FR，用于因子匹配）；可附 portion_g（克重）、volume_ml（毫升）等说明字段，不要自创 type/size 等键。",
+  properties: {
+    geography: { type: "string", description: "ISO 国家/地区码，如 CN、FR；缺省按全局/默认因子。" },
+    portion_g: { type: "number", description: "可选：餐食克重（说明用，缩放由 quantity/unit 决定）。" },
+    volume_ml: { type: "number", description: "可选：饮品/瓶装水容量（毫升，说明用）。" },
+    reusable: { type: "boolean", description: "可选：true 表示自带水杯/直饮水等可重复替代，对应直饮水因子。" },
+  },
+  additionalProperties: true,
+};
+
 // --- 4.1 extract_product_attributes ---------------------------------------
 
 export const extractProductAttributesSchema: ToolDefinition = {
@@ -150,7 +176,7 @@ export const getEmissionFactorsSchema: ToolDefinition = {
     type: "object",
     required: ["category_id"],
     properties: {
-      category_id: { type: "string" },
+      category_id: { type: "string", enum: CATEGORY_ID_ENUM },
       lifecycle_stage: {
         type: "string",
         enum: ["agriculture", "processing", "transport", "cooking", "packaging", "use", "end_of_life", "all"],
@@ -239,8 +265,13 @@ export const calculateFootprintSchema: ToolDefinition = {
     type: "object",
     required: ["category_id", "attributes", "quantity", "unit"],
     properties: {
-      category_id: { type: "string" },
-      attributes: { type: "object", additionalProperties: true },
+      category_id: {
+        type: "string",
+        enum: CATEGORY_ID_ENUM,
+        description:
+          "内部标准品类 id，必须从枚举中选择；牛肉餐=meal_beef，素食餐=meal_veggie，瓶装水=bottled_water，直饮水/自带水杯=other（含直饮水 F-other-001 因子），unit 用 bottle。",
+      },
+      attributes: ATTRIBUTES_SCHEMA,
       quantity: { type: "number", minimum: 0 },
       unit: { type: "string", enum: ["meal", "bottle", "can", "pack", "item", "g", "ml"] },
       factor_set_id: { type: ["string", "null"] },
@@ -311,8 +342,13 @@ export const compareAlternativesSchema: ToolDefinition = {
           required: ["label", "category_id"],
           properties: {
             label: { type: "string" },
-            category_id: { type: "string" },
-            attributes: { type: "object", additionalProperties: true },
+            category_id: {
+              type: "string",
+              enum: CATEGORY_ID_ENUM,
+              description:
+                "内部标准品类 id，必须从枚举中选择；直饮水/自带水杯用 other（F-other-001 直饮水因子），不要把自带水杯也写成 bottled_water。",
+            },
+            attributes: ATTRIBUTES_SCHEMA,
           },
           additionalProperties: false,
         },
@@ -428,7 +464,7 @@ export const logCommitmentSchema: ToolDefinition = {
     required: ["commitment_text", "category_id", "alternative"],
     properties: {
       commitment_text: { type: "string", minLength: 1, maxLength: 300 },
-      category_id: { type: "string" },
+      category_id: { type: "string", enum: CATEGORY_ID_ENUM },
       alternative: { type: "string" },
       barrier: { type: ["string", "null"] },
       plan: { type: ["string", "null"] },

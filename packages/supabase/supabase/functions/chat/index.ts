@@ -198,6 +198,27 @@ O = Open questions 开放式问题；A = Affirmations 肯定；R = Reflective li
 `;
 
 // ../core/src/tools/schemas.ts
+var CATEGORY_ID_ENUM = [
+  "bottled_water",
+  "beverage",
+  "meal_beef",
+  "meal_veggie",
+  "snack",
+  "snack_packaging",
+  "express_packaging",
+  "other"
+];
+var ATTRIBUTES_SCHEMA = {
+  type: "object",
+  description: "产品/餐食属性。引擎只读取 geography（ISO 国家/地区码，如 CN、FR，用于因子匹配）；可附 portion_g（克重）、volume_ml（毫升）等说明字段，不要自创 type/size 等键。",
+  properties: {
+    geography: { type: "string", description: "ISO 国家/地区码，如 CN、FR；缺省按全局/默认因子。" },
+    portion_g: { type: "number", description: "可选：餐食克重（说明用，缩放由 quantity/unit 决定）。" },
+    volume_ml: { type: "number", description: "可选：饮品/瓶装水容量（毫升，说明用）。" },
+    reusable: { type: "boolean", description: "可选：true 表示自带水杯/直饮水等可重复替代，对应直饮水因子。" }
+  },
+  additionalProperties: true
+};
 var extractProductAttributesSchema = {
   name: "extract_product_attributes",
   description: "从用户自由文本中抽取产品属性（名称、品牌、配料、规格、包装形态），输出结构化属性与置信度；不做排放估算。",
@@ -306,7 +327,7 @@ var getEmissionFactorsSchema = {
     type: "object",
     required: ["category_id"],
     properties: {
-      category_id: { type: "string" },
+      category_id: { type: "string", enum: CATEGORY_ID_ENUM },
       lifecycle_stage: {
         type: "string",
         enum: ["agriculture", "processing", "transport", "cooking", "packaging", "use", "end_of_life", "all"]
@@ -391,8 +412,12 @@ var calculateFootprintSchema = {
     type: "object",
     required: ["category_id", "attributes", "quantity", "unit"],
     properties: {
-      category_id: { type: "string" },
-      attributes: { type: "object", additionalProperties: true },
+      category_id: {
+        type: "string",
+        enum: CATEGORY_ID_ENUM,
+        description: "内部标准品类 id，必须从枚举中选择；牛肉餐=meal_beef，素食餐=meal_veggie，瓶装水=bottled_water，直饮水/自带水杯=other（含直饮水 F-other-001 因子），unit 用 bottle。"
+      },
+      attributes: ATTRIBUTES_SCHEMA,
       quantity: { type: "number", minimum: 0 },
       unit: { type: "string", enum: ["meal", "bottle", "can", "pack", "item", "g", "ml"] },
       factor_set_id: { type: ["string", "null"] }
@@ -459,8 +484,12 @@ var compareAlternativesSchema = {
           required: ["label", "category_id"],
           properties: {
             label: { type: "string" },
-            category_id: { type: "string" },
-            attributes: { type: "object", additionalProperties: true }
+            category_id: {
+              type: "string",
+              enum: CATEGORY_ID_ENUM,
+              description: "内部标准品类 id，必须从枚举中选择；直饮水/自带水杯用 other（F-other-001 直饮水因子），不要把自带水杯也写成 bottled_water。"
+            },
+            attributes: ATTRIBUTES_SCHEMA
           },
           additionalProperties: false
         }
@@ -570,7 +599,7 @@ var logCommitmentSchema = {
     required: ["commitment_text", "category_id", "alternative"],
     properties: {
       commitment_text: { type: "string", minLength: 1, maxLength: 300 },
-      category_id: { type: "string" },
+      category_id: { type: "string", enum: CATEGORY_ID_ENUM },
       alternative: { type: "string" },
       barrier: { type: ["string", "null"] },
       plan: { type: ["string", "null"] },
@@ -1238,7 +1267,7 @@ var OpenAICompatibleLlm = class {
     };
     if (options.tools && options.tools.length > 0) {
       body.tools = toOpenAiTools(options.tools);
-      body.tool_choice = "auto";
+      body.tool_choice = options.toolChoice ?? "auto";
     }
     let lastError;
     for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
@@ -1415,6 +1444,31 @@ function createLlmAdapter(config = {}, env = process.env) {
   });
 }
 
+// ../core/src/adapters/llm/provider-profile.ts
+function loadActiveProfile(env = process.env) {
+  const baseUrl = (env.LLM_BASE_URL ?? "").trim();
+  const apiKey = (env.LLM_API_KEY ?? "").trim();
+  if (!baseUrl || !apiKey) return null;
+  const id = (env.LLM_PROVIDER ?? "openai-compatible").trim() || "openai-compatible";
+  const defaultModel = (env.LLM_MODEL ?? "").trim();
+  return { id, baseUrl, apiKey, defaultModel };
+}
+function createAdapterForProfile(profile, modelOverride) {
+  const model = (modelOverride ?? profile.defaultModel).trim();
+  if (!model) {
+    throw new LlmError(
+      "invalid_response",
+      "No model selected: the profile has no default model and no override was supplied."
+    );
+  }
+  return new OpenAICompatibleLlm({
+    provider: profile.id,
+    baseUrl: profile.baseUrl,
+    apiKey: profile.apiKey,
+    model
+  });
+}
+
 // ../core/src/mi/orchestrator/transition.ts
 var PRODUCT_KEYWORD_RE = /餐|饭|肉|菜|水|瓶|罐|零食|可乐|饮料|包装|袋|盒|杯|果汁|奶|小吃/;
 function detectProductMention(text, context) {
@@ -1454,7 +1508,7 @@ function decideNextState(state, signals, userText, context) {
 }
 
 // ../core/src/mi/orchestrator/orchestrator.ts
-var COMPARE_INTENT_RE = /哪个|对比|比较|vs|VS|区别|替代|还是/;
+var COMPARE_INTENT_RE = /哪个|对比|比较|vs|VS|区别|替代|还是|差多少|自带|换/;
 var FORWARD_CHAIN = {
   WELCOME: "RAPPORT",
   RAPPORT: "DISCOVERY",
@@ -1578,9 +1632,11 @@ var MiOrchestrator = class {
   async runTurn(userText, context) {
     const events = [];
     const tools = this.allowedToolSpecs();
+    const forceTool = tools.length > 0 && (this.state === "FACT_SHARING" || this.state === "DECISION");
     const first = await this.llm.complete({
       messages: this.messages,
       tools,
+      toolChoice: forceTool ? "required" : "auto",
       onToken: (delta) => events.push({ event: "token", data: { delta } })
     });
     if (first.toolCalls.length > 0) {
@@ -1728,7 +1784,7 @@ function statusForCode(code) {
 }
 var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id, x-llm-model",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 function preflightResponse() {
@@ -2712,13 +2768,16 @@ function createToolExecutor(deps) {
         const rawItems = Array.isArray(args.items) ? args.items : [];
         const items = rawItems.map((item, index) => {
           const record = asRecord(item) ?? {};
-          const categoryId = typeof record.category_id === "string" ? record.category_id : "other";
+          const label = typeof record.label === "string" ? record.label : `选项 ${index + 1}`;
+          const itemAttrs = asRecord(record.attributes) ?? {};
+          const isReusable = itemAttrs.reusable === true || /直饮|自带|水杯|tap/i.test(label);
+          const categoryId = isReusable ? "other" : typeof record.category_id === "string" ? record.category_id : "other";
           return {
-            label: typeof record.label === "string" ? record.label : `选项 ${index + 1}`,
+            label,
             category_id: categoryId,
-            attributes: asRecord(record.attributes) ?? {},
+            attributes: isReusable ? { ...itemAttrs, reusable: true } : itemAttrs,
             quantity: 1,
-            unit: unitForCategory(categoryId)
+            unit: isReusable ? "bottle" : unitForCategory(categoryId)
           };
         });
         const outcome = compareFootprints(items);
@@ -2828,6 +2887,12 @@ function seedMock(llm, message) {
     content: "听起来你在留意日常选择；方便说说最近一次在食堂或便利店的购买场景吗？"
   });
 }
+function sanitizeModelHeader(value) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > 120) return null;
+  return /^[A-Za-z0-9._:-]+$/.test(trimmed) ? trimmed : null;
+}
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return preflightResponse();
   if (request.method !== "POST") {
@@ -2843,8 +2908,15 @@ Deno.serve(async (request) => {
   }
   const raw = body.value;
   const env = envObject();
-  const llm = createLlmAdapter({}, env);
-  if (llm instanceof MockLlm) seedMock(llm, raw.message);
+  const modelOverride = sanitizeModelHeader(request.headers.get("x-llm-model"));
+  const profile = loadActiveProfile(env);
+  let llm;
+  if (profile) {
+    llm = createAdapterForProfile(profile, modelOverride ?? void 0);
+  } else {
+    llm = createLlmAdapter({}, env);
+    if (llm instanceof MockLlm) seedMock(llm, raw.message);
+  }
   const sessionId = raw.session_id ?? `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
   const context = {
     entryScene: raw.context?.entry_scene,

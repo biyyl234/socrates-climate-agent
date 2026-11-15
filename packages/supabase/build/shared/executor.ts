@@ -157,13 +157,24 @@ export function createToolExecutor(deps: ExecutorDeps): ToolExecutor {
         const rawItems = Array.isArray(args.items) ? args.items : [];
         const items = rawItems.map((item, index) => {
           const record = asRecord(item) ?? {};
-          const categoryId = typeof record.category_id === "string" ? record.category_id : "other";
+          const label = typeof record.label === "string" ? record.label : `选项 ${index + 1}`;
+          const itemAttrs = asRecord(record.attributes) ?? {};
+          // Normalize the reusable/tap-water alternative to the "other" category
+          // (F-other-001 tap-water factor) with a bottle unit. Without this the
+          // model tends to map both items to bottled_water, giving identical numbers.
+          const isReusable =
+            itemAttrs.reusable === true || /直饮|自带|水杯|tap/i.test(label);
+          const categoryId = isReusable
+            ? "other"
+            : typeof record.category_id === "string"
+              ? record.category_id
+              : "other";
           return {
-            label: typeof record.label === "string" ? record.label : `选项 ${index + 1}`,
+            label,
             category_id: categoryId as CategoryId,
-            attributes: asRecord(record.attributes) ?? {},
+            attributes: isReusable ? { ...itemAttrs, reusable: true } : itemAttrs,
             quantity: 1,
-            unit: unitForCategory(categoryId),
+            unit: isReusable ? "bottle" : unitForCategory(categoryId),
           };
         });
         const outcome = compareFootprints(items);

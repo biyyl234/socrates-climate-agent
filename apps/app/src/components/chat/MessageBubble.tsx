@@ -1,5 +1,22 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View, type ViewStyle } from "react-native";
 import { useTheme } from "../../theme/ThemeProvider";
+
+function rgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Frosted panel: blur on web, translucent rgba fallback on native. */
+function frost(color: string, alpha: number): ViewStyle {
+  return {
+    backgroundColor: rgba(color, alpha),
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
+  } as ViewStyle;
+}
 import type { ChatMessage } from "../../types/chat";
 import { FootprintCard } from "./FootprintCard";
 import { CompareCard } from "./CompareCard";
@@ -20,9 +37,9 @@ export function MessageBubble({ message, onAcceptCommitment }: Props) {
       <View
         style={[
           styles.bubble,
+          frost(isUser ? theme.c.secondarySoft : theme.c.surface, isUser ? 0.9 : 0.86),
           {
             maxWidth: theme.isWide ? "72%" : "92%",
-            backgroundColor: isUser ? theme.c.secondarySoft : theme.c.surface,
             borderColor: theme.c.border,
           },
         ]}

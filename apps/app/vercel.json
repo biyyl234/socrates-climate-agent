@@ -1,0 +1,37 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "expo export -p web && node scripts/sync-avatar.mjs --web",
+  "outputDirectory": "dist",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "rewrites": [
+    { "source": "/onboarding", "destination": "/onboarding.html" },
+    { "source": "/chat", "destination": "/chat.html" },
+    { "source": "/commitments", "destination": "/commitments.html" },
+    { "source": "/compare", "destination": "/compare.html" },
+    { "source": "/settings", "destination": "/settings.html" },
+    { "source": "/_sitemap", "destination": "/_sitemap.html" },
+    { "source": "/\\+not-found", "destination": "/+not-found.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/_expo/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/avatar/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}

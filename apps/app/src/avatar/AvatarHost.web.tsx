@@ -1,7 +1,8 @@
 /**
- * Web avatar host: loads the standalone avatar bundle in an iframe and bridges
- * the frozen versioned postMessage protocol. Degrades to the L4 placeholder when
- * the URL is unconfigured or the bundle never reports `ready`.
+ * Web avatar host: loads the same standalone avatar bundle copied into the web
+ * export under `/avatar/` (same-origin root-relative path) in an iframe, and
+ * bridges the frozen versioned postMessage protocol. Degrades to the L4
+ * placeholder when the bundle never reports `ready`.
  */
 import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { View, StyleSheet } from "react-native";
@@ -17,7 +18,13 @@ import { useTheme } from "../theme/ThemeProvider";
 import { FallbackAvatar } from "./FallbackAvatar";
 import type { AvatarBridge, AvatarHostProps } from "./types";
 
-const READY_TIMEOUT_MS = 8000;
+const READY_TIMEOUT_MS = 15000;
+
+/**
+ * Same-origin root-relative location of the bundled avatar in the web export
+ * (`dist/avatar/index.html`, produced by `scripts/sync-avatar.mjs --web`).
+ */
+const AVATAR_SRC = "/avatar/index.html";
 
 export function AvatarHost({ bridgeRef, onReady, onError, style }: AvatarHostProps) {
   const theme = useTheme();
@@ -30,7 +37,9 @@ export function AvatarHost({ bridgeRef, onReady, onError, style }: AvatarHostPro
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
 
-  const urlConfigured = env.avatarUrl.length > 0;
+  // The local bundle ships with the web export, so the host is always
+  // "configured"; this no longer reads EXPO_PUBLIC_AVATAR_URL.
+  const urlConfigured = true;
 
   const send = (msg: AppToAvatar) => {
     iframeRef.current?.contentWindow?.postMessage(wrap(msg), "*");
@@ -147,7 +156,7 @@ export function AvatarHost({ bridgeRef, onReady, onError, style }: AvatarHostPro
       ) : (
         createElement("iframe", {
           ref: iframeRef,
-          src: env.avatarUrl,
+          src: AVATAR_SRC,
           title: "苏格拉底虚拟人",
           sandbox: "allow-scripts allow-same-origin",
           allow: "autoplay; microphone",

@@ -36,7 +36,7 @@ import type {
 } from "./types";
 import { decideNextState, detectProductMention } from "./transition";
 
-const COMPARE_INTENT_RE = /哪个|对比|比较|vs|VS|区别|替代|还是/;
+const COMPARE_INTENT_RE = /哪个|对比|比较|vs|VS|区别|替代|还是|差多少|自带|换/;
 
 /** Legal chain used to fast-forward along the MI flow for this turn's intent. */
 const FORWARD_CHAIN: Record<MIState, MIState | undefined> = {
@@ -196,9 +196,17 @@ export class MiOrchestrator {
     const events: SseEvent[] = [];
     const tools = this.allowedToolSpecs();
 
+    // Reliability for the demo: once the MI flow reaches fact-sharing or a
+    // decision, a product mention means a tool must run. Force the first
+    // completion to emit a tool call rather than only asking a clarifying
+    // question; the tightened schema enums keep the args valid.
+    const forceTool =
+      tools.length > 0 && (this.state === "FACT_SHARING" || this.state === "DECISION");
+
     const first = await this.llm.complete({
       messages: this.messages,
       tools,
+      toolChoice: forceTool ? "required" : "auto",
       onToken: (delta) => events.push({ event: "token", data: { delta } }),
     });
 

@@ -73,6 +73,27 @@ var colorTokens = {
 };
 
 // ../core/src/tools/schemas.ts
+var CATEGORY_ID_ENUM = [
+  "bottled_water",
+  "beverage",
+  "meal_beef",
+  "meal_veggie",
+  "snack",
+  "snack_packaging",
+  "express_packaging",
+  "other"
+];
+var ATTRIBUTES_SCHEMA = {
+  type: "object",
+  description: "产品/餐食属性。引擎只读取 geography（ISO 国家/地区码，如 CN、FR，用于因子匹配）；可附 portion_g（克重）、volume_ml（毫升）等说明字段，不要自创 type/size 等键。",
+  properties: {
+    geography: { type: "string", description: "ISO 国家/地区码，如 CN、FR；缺省按全局/默认因子。" },
+    portion_g: { type: "number", description: "可选：餐食克重（说明用，缩放由 quantity/unit 决定）。" },
+    volume_ml: { type: "number", description: "可选：饮品/瓶装水容量（毫升，说明用）。" },
+    reusable: { type: "boolean", description: "可选：true 表示自带水杯/直饮水等可重复替代，对应直饮水因子。" }
+  },
+  additionalProperties: true
+};
 var extractProductAttributesSchema = {
   name: "extract_product_attributes",
   description: "从用户自由文本中抽取产品属性（名称、品牌、配料、规格、包装形态），输出结构化属性与置信度；不做排放估算。",
@@ -181,7 +202,7 @@ var getEmissionFactorsSchema = {
     type: "object",
     required: ["category_id"],
     properties: {
-      category_id: { type: "string" },
+      category_id: { type: "string", enum: CATEGORY_ID_ENUM },
       lifecycle_stage: {
         type: "string",
         enum: ["agriculture", "processing", "transport", "cooking", "packaging", "use", "end_of_life", "all"]
@@ -266,8 +287,12 @@ var calculateFootprintSchema = {
     type: "object",
     required: ["category_id", "attributes", "quantity", "unit"],
     properties: {
-      category_id: { type: "string" },
-      attributes: { type: "object", additionalProperties: true },
+      category_id: {
+        type: "string",
+        enum: CATEGORY_ID_ENUM,
+        description: "内部标准品类 id，必须从枚举中选择；牛肉餐=meal_beef，素食餐=meal_veggie，瓶装水=bottled_water，直饮水/自带水杯=other（含直饮水 F-other-001 因子），unit 用 bottle。"
+      },
+      attributes: ATTRIBUTES_SCHEMA,
       quantity: { type: "number", minimum: 0 },
       unit: { type: "string", enum: ["meal", "bottle", "can", "pack", "item", "g", "ml"] },
       factor_set_id: { type: ["string", "null"] }
@@ -334,8 +359,12 @@ var compareAlternativesSchema = {
           required: ["label", "category_id"],
           properties: {
             label: { type: "string" },
-            category_id: { type: "string" },
-            attributes: { type: "object", additionalProperties: true }
+            category_id: {
+              type: "string",
+              enum: CATEGORY_ID_ENUM,
+              description: "内部标准品类 id，必须从枚举中选择；直饮水/自带水杯用 other（F-other-001 直饮水因子），不要把自带水杯也写成 bottled_water。"
+            },
+            attributes: ATTRIBUTES_SCHEMA
           },
           additionalProperties: false
         }
@@ -445,7 +474,7 @@ var logCommitmentSchema = {
     required: ["commitment_text", "category_id", "alternative"],
     properties: {
       commitment_text: { type: "string", minLength: 1, maxLength: 300 },
-      category_id: { type: "string" },
+      category_id: { type: "string", enum: CATEGORY_ID_ENUM },
       alternative: { type: "string" },
       barrier: { type: ["string", "null"] },
       plan: { type: ["string", "null"] },
@@ -553,6 +582,7 @@ var NoTts = class {
 function encodingFor(format) {
   return format === "audio/wav" ? "wav" : "mp3";
 }
+var DEFAULT_ENDPOINT = "https://openspeech.bytedance.com/api/v1/tts";
 var VolcanoTts = class {
   provider = "volcano";
   available = true;
@@ -612,20 +642,17 @@ var VolcanoTts = class {
     const format = request.format ?? this.config.defaultFormat ?? "audio/mp3";
     const voice = request.voice ?? this.config.voiceType;
     const sentences = this.splitBySentence(request.text);
-    if (!this.fetchImpl || !this.config.endpoint) {
-      throw new TtsError(
-        "unavailable",
-        "Volcano TTS upstream is not wired yet; credentials and endpoint are pending."
-      );
-    }
+    const endpoint = this.config.endpoint ?? DEFAULT_ENDPOINT;
+    const fetchImpl = this.fetchImpl ?? fetch;
     const chunks = [];
     for (let i = 0; i < sentences.length; i += 1) {
       const payload = this.buildPayload(sentences[i], i + 1, format, request.sessionId);
-      const response = await this.fetchImpl(this.config.endpoint, {
+      const response = await fetchImpl(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${this.config.accessToken}`
+          // Volcano auth scheme uses a semicolon: "Bearer;<access token>"
+          Authorization: `Bearer;${this.config.accessToken}`
         },
         body: JSON.stringify(payload)
       });
@@ -695,7 +722,7 @@ function statusForCode(code) {
 }
 var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id, x-llm-model",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 function preflightResponse() {

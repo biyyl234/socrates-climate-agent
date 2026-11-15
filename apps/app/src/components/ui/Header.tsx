@@ -8,16 +8,20 @@ interface Props {
   subtitle?: string;
   right?: ReactNode;
   hideBack?: boolean;
+  /** Transparent, borderless variant used when the bar floats over the avatar. */
+  floating?: boolean;
 }
 
-export function Header({ title, subtitle, right, hideBack }: Props) {
+export function Header({ title, subtitle, right, hideBack, floating }: Props) {
   const theme = useTheme();
   const router = useRouter();
   return (
     <View
       style={[
         styles.bar,
-        { borderColor: theme.c.border, backgroundColor: theme.c.bg },
+        floating
+          ? { borderBottomWidth: 0, backgroundColor: "transparent" }
+          : { borderColor: theme.c.border, backgroundColor: theme.c.bg },
       ]}
     >
       <View style={styles.left}>

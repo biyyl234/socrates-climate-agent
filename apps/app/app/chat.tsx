@@ -9,10 +9,13 @@ import {
   TextInput,
   View,
   type ScrollViewInstance,
+  type ViewStyle,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import type { MIState, AvatarState, ExpressionId, MotionId, ChatRequest } from "@socrates/core";
 import { useTheme } from "../src/theme/ThemeProvider";
+import { themeZIndex } from "../src/theme/theme";
 import { AvatarHost } from "../src/avatar/AvatarHost";
 import type { AvatarBridge } from "../src/avatar/types";
 import { MessageBubble } from "../src/components/chat/MessageBubble";
@@ -50,6 +53,33 @@ function isStoryId(value: string | undefined): value is StoryId {
   return value === "water" || value === "beef";
 }
 
+function rgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Frosted panel: backdrop blur on web, translucent rgba fallback on native. */
+function frost(color: string, alpha: number): ViewStyle {
+  return {
+    backgroundColor: rgba(color, alpha),
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+  } as ViewStyle;
+}
+
+/** Bottom scrim: gradient darkening on web, solid translucent fallback on native. */
+function bottomScrim(color: string): ViewStyle {
+  if (Platform.OS === "web") {
+    return {
+      backgroundImage: `linear-gradient(to top, ${rgba(color, 0.82)} 0%, ${rgba(color, 0)} 100%)`,
+    };
+  }
+  return { backgroundColor: rgba(color, 0.55) };
+}
+
 export default function ChatScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -66,6 +96,7 @@ export default function ChatScreen() {
   const scrollRef = useRef<ScrollViewInstance>(null);
   const stepIndexRef = useRef(0);
   const greetedRef = useRef(false);
+  const busyRef = useRef(false);
 
   const patchMessage = useCallback((id: string, patch: Partial<ChatMessage>) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
@@ -196,7 +227,10 @@ export default function ChatScreen() {
 
   const send = useCallback(async (override?: string) => {
     const text = (override ?? input).trim();
-    if (!text || busy) return;
+    // Ref guard prevents re-entrancy even if two presses land before re-render;
+    // the busy state additionally disables the controls.
+    if (!text || busyRef.current) return;
+    busyRef.current = true;
     setInput("");
     setBusy(true);
     setError(null);
@@ -230,8 +264,9 @@ export default function ChatScreen() {
     }
 
     setBusy(false);
+    busyRef.current = false;
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
-  }, [input, busy, miState, story, runBackendTurn, runDemoStep]);
+  }, [input, miState, story, runBackendTurn, runDemoStep]);
 
   const acceptCommitment = useCallback(
     async (message: ChatMessage) => {
@@ -276,86 +311,110 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={[styles.screen, { backgroundColor: theme.c.bg }]}
+      style={[styles.screen, { backgroundColor: "transparent" }]}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <Header
-        title={title}
-        subtitle={story ? STORY_META[story].subtitle : "离线可演示的 MI 对话"}
-        right={
-          <View style={styles.headerRight}>
-            <Pressable accessibilityRole="button" onPress={() => router.push("/commitments")}>
-              <Text style={[theme.font("sm"), { color: theme.c.primary }]}>承诺</Text>
-            </Pressable>
-            <Pressable accessibilityRole="button" onPress={() => router.push("/settings")}>
-              <Text style={[theme.font("sm"), { color: theme.c.primary }]}>设置</Text>
-            </Pressable>
-          </View>
-        }
-      />
+      {/* Full-screen avatar layer, behind every floating control. */}
+      <AvatarHost bridgeRef={bridgeRef} style={styles.avatarLayer} />
 
-      <View style={styles.statusRow}>
-        <StatusBanner />
-        <Text style={[theme.font("xs"), { color: theme.c.textTertiary }]}>
-          MI 阶段：{MI_STATE_LABELS[miState]} · 虚拟人层级 L{bridgeRef.current?.level ?? 4}
-        </Text>
-      </View>
-
-      <View
-        style={[styles.body, { flexDirection: theme.isWide ? "row" : "column" }]}
+      <SafeAreaView
+        style={[styles.overlay, { zIndex: themeZIndex.content }]}
+        edges={["top", "bottom"]}
         onTouchStart={() => bridgeRef.current?.unlockAudio()}
       >
-        <View style={[styles.avatarCol, { width: theme.isWide ? 300 : "100%" }]}>
-          <AvatarHost bridgeRef={bridgeRef} />
-        </View>
-
-        <View style={styles.chatCol}>
-          <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messagesInner}>
-            {messages.map((message) => (
-              <MessageBubble key={message.id} message={message} onAcceptCommitment={acceptCommitment} />
-            ))}
-            {error ? (
-              <Text style={[theme.font("xs"), { color: theme.c.danger, padding: 8 }]}>{error}</Text>
-            ) : null}
-          </ScrollView>
-
-          {chips.length > 0 ? (
-            <View style={styles.chips}>
-              {chips.map((chip) => (
-                <Chip key={chip} label={chip} onPress={() => { setInput(chip); void send(chip); }} />
-              ))}
-            </View>
-          ) : null}
-
-          <View style={[styles.inputBar, { borderColor: theme.c.border, backgroundColor: theme.c.surfaceAlt }]}>
-            <TextInput
-              value={input}
-              onChangeText={setInput}
-              placeholder="想聊聊哪一餐，还是哪一瓶水？"
-              placeholderTextColor={theme.c.textTertiary}
-              multiline
-              style={[theme.font("base"), { color: theme.c.textPrimary, flex: 1 }]}
-              onSubmitEditing={() => void send()}
-              returnKeyType="send"
-            />
-            <Button title="发送" variant="primary" onPress={() => void send()} loading={busy} style={styles.send} />
+        <View style={[styles.topBar, frost(theme.c.bg, 0.55)]}>
+          <Header
+            floating
+            title={title}
+            subtitle={story ? STORY_META[story].subtitle : "离线可演示的 MI 对话"}
+            right={
+              <View style={styles.headerRight}>
+                <Pressable accessibilityRole="button" onPress={() => router.push("/commitments")}>
+                  <Text style={[theme.font("sm"), { color: theme.c.primary }]}>承诺</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={() => router.push("/settings")}>
+                  <Text style={[theme.font("sm"), { color: theme.c.primary }]}>设置</Text>
+                </Pressable>
+              </View>
+            }
+          />
+          <View style={styles.statusRow}>
+            <StatusBanner />
+            <Text style={[theme.font("xs"), { color: theme.c.textTertiary }]}>
+              MI 阶段：{MI_STATE_LABELS[miState]} · 虚拟人层级 L{bridgeRef.current?.level ?? 4}
+            </Text>
           </View>
         </View>
-      </View>
+
+        <View
+          style={[styles.main, { flexDirection: theme.isWide ? "row" : "column" }]}
+        >
+          {theme.isWide ? <View style={styles.wideSpacer} /> : null}
+          <View style={[styles.panel, { width: theme.isWide ? 400 : "100%", flex: theme.isWide ? undefined : 1 }]}>
+            <ScrollView ref={scrollRef} style={styles.messages} contentContainerStyle={styles.messagesInner}>
+              {messages.map((message) => (
+                <MessageBubble key={message.id} message={message} onAcceptCommitment={acceptCommitment} />
+              ))}
+              {error ? (
+                <Text style={[theme.font("xs"), { color: theme.c.danger, padding: 8 }]}>{error}</Text>
+              ) : null}
+            </ScrollView>
+
+            {chips.length > 0 ? (
+              <View style={[styles.chips, frost(theme.c.bg, 0.45)]}>
+                {chips.map((chip) => (
+                  <Chip
+                    key={chip}
+                    label={chip}
+                    disabled={busy}
+                    onPress={() => void send(chip)}
+                  />
+                ))}
+              </View>
+            ) : null}
+
+            <View style={[styles.scrim, bottomScrim(theme.c.bg)]}>
+              <View
+                style={[
+                  styles.inputBar,
+                  frost(theme.c.surfaceAlt, 0.82),
+                  { borderColor: theme.c.border },
+                ]}
+              >
+                <TextInput
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder="想聊聊哪一餐，还是哪一瓶水？"
+                  placeholderTextColor={theme.c.textTertiary}
+                  multiline
+                  style={[theme.font("base"), { color: theme.c.textPrimary, flex: 1 }]}
+                  onSubmitEditing={() => void send()}
+                  returnKeyType="send"
+                />
+                <Button title="发送" variant="primary" onPress={() => void send()} loading={busy} style={styles.send} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  avatarLayer: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
+  overlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0 },
   headerRight: { flexDirection: "row", gap: 14 },
-  statusRow: { gap: 6, paddingHorizontal: 16, paddingVertical: 8 },
-  body: { flex: 1, gap: 12, paddingHorizontal: 16 },
-  avatarCol: { height: 240, marginBottom: 4 },
-  chatCol: { flex: 1, gap: 8 },
+  topBar: { gap: 6, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 },
+  statusRow: { gap: 6 },
+  main: { flex: 1, gap: 12, paddingHorizontal: 16 },
+  wideSpacer: { flex: 1 },
+  panel: { gap: 8 },
   messages: { flex: 1 },
   messagesInner: { gap: 12, paddingVertical: 8 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, borderRadius: 12, padding: 8 },
+  scrim: { paddingTop: 10, paddingBottom: 8 },
   inputBar: {
     flexDirection: "row",
     alignItems: "center",

@@ -8,8 +8,10 @@
  */
 
 import {
+  createAdapterForProfile,
   createLlmAdapter,
   encodeSse,
+  loadActiveProfile,
   MiOrchestrator,
   MockLlm,
   validateChatRequest,
@@ -76,6 +78,14 @@ function seedMock(llm: MockLlm, message: string): void {
   });
 }
 
+/** Accept only a safe model id from the client header; reject injection/garbage. */
+function sanitizeModelHeader(value: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0 || trimmed.length > 120) return null;
+  return /^[A-Za-z0-9._:-]+$/.test(trimmed) ? trimmed : null;
+}
+
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return preflightResponse();
   if (request.method !== "POST") {
@@ -101,8 +111,17 @@ Deno.serve(async (request: Request) => {
   };
 
   const env = envObject();
-  const llm = createLlmAdapter({}, env);
-  if (llm instanceof MockLlm) seedMock(llm, raw.message);
+  const modelOverride = sanitizeModelHeader(request.headers.get("x-llm-model"));
+  const profile = loadActiveProfile(env);
+  let llm;
+  if (profile) {
+    // Real gateway: server-side key, model from header override or profile default.
+    llm = createAdapterForProfile(profile, modelOverride ?? undefined);
+  } else {
+    // No key configured: offline Mock adapter with a scripted flow.
+    llm = createLlmAdapter({}, env);
+    if (llm instanceof MockLlm) seedMock(llm, raw.message);
+  }
 
   const sessionId =
     raw.session_id ?? `sess_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;

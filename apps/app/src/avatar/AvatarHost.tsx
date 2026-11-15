@@ -1,8 +1,9 @@
 /**
- * Native avatar host (Android/iOS): loads the same standalone avatar bundle in a
- * react-native-webview and bridges the frozen postMessage protocol. Falls back
- * to the L4 placeholder when the URL is unconfigured, the load errors out, or
- * the bundle never reports `ready`.
+ * Native avatar host (Android/iOS): loads the same standalone avatar bundle that
+ * is packaged inside the app (copied to Android assets by the
+ * `with-bundled-avatar` config plugin) in a react-native-webview over
+ * `file://`, and bridges the frozen postMessage protocol. Falls back to the L4
+ * placeholder when the load errors out or the bundle never reports `ready`.
  */
 import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { View, StyleSheet } from "react-native";
@@ -19,7 +20,13 @@ import { useTheme } from "../theme/ThemeProvider";
 import { FallbackAvatar } from "./FallbackAvatar";
 import type { AvatarBridge, AvatarHostProps } from "./types";
 
-const READY_TIMEOUT_MS = 8000;
+const READY_TIMEOUT_MS = 15000;
+
+/**
+ * The avatar bundle ships inside the APK/AAB under Android assets; the WebView
+ * resolves it from the app's private file space with no network access.
+ */
+const LOCAL_AVATAR_URI = "file:///android_asset/avatar/index.html";
 
 // react-native-webview v14 的 props 类型与 RN 0.88 生成类型存在交集冲突，
 // 原生壳使用显式宽松组件类型；Web 端由 AvatarHost.web.tsx 的 iframe 实现。
@@ -39,7 +46,9 @@ export function AvatarHost({ bridgeRef, onReady, onError, style }: AvatarHostPro
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
 
-  const urlConfigured = env.avatarUrl.length > 0;
+  // The local bundle is always packaged with the app, so the avatar host is
+  // always "configured"; this no longer reads EXPO_PUBLIC_AVATAR_URL.
+  const urlConfigured = true;
 
   const post = (msg: AppToAvatar) => {
     const envelope = wrap(msg);
@@ -153,7 +162,7 @@ export function AvatarHost({ bridgeRef, onReady, onError, style }: AvatarHostPro
       ) : (
         <WebView
           ref={webRef}
-          source={{ uri: env.avatarUrl }}
+          source={{ uri: LOCAL_AVATAR_URI }}
           onMessage={onMessage}
           onError={() => {
             setLoadFailed(true);
@@ -164,6 +173,12 @@ export function AvatarHost({ bridgeRef, onReady, onError, style }: AvatarHostPro
             setLevel(4);
           }}
           javaScriptEnabled
+          // file:// bundle: allow module/script/XHR and texture loads across
+          // file origins (ES modules, fetch of model JSON, texture PNGs).
+          allowFileAccess
+          allowFileAccessFromFileURLs
+          allowUniversalAccessFromFileURLs
+          domStorageEnabled
           originWhitelist={["*"]}
           allowsInlineMediaPlayback
           mediaPlaybackRequiresUserAction
@@ -176,6 +191,6 @@ export function AvatarHost({ bridgeRef, onReady, onError, style }: AvatarHostPro
 }
 
 const styles = StyleSheet.create({
-  host: { overflow: "hidden" },
-  webview: { backgroundColor: "transparent" },
+  host: { flex: 1, overflow: "hidden" },
+  webview: { flex: 1, backgroundColor: "transparent" },
 });

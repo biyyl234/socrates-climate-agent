@@ -733,7 +733,7 @@ function statusForCode(code) {
 }
 var CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-id, x-llm-model",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
 };
 function preflightResponse() {

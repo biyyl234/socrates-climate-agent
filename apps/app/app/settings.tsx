@@ -14,6 +14,7 @@ import {
   SOURCE_POORE_NEMECEK_2018,
 } from "@socrates/data";
 import { backendConfigured, env } from "../src/config/env";
+import { ModelPicker } from "../src/components/settings/ModelPicker";
 
 const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
   { value: "system", label: "跟随系统" },
@@ -75,6 +76,14 @@ export default function SettingsScreen() {
         <Text style={[theme.font("xs"), { color: theme.c.textTertiary, marginTop: 8 }]}>
           当前状态：{backendConfigured ? "已连接后端；请求按冻结 SSE / API 契约发起。" : "离线演示；对话与数字来自内置脚本与本地因子库。"}
         </Text>
+      </Card>
+
+      <Card>
+        <Text style={[theme.font("md"), { color: theme.c.textPrimary }]}>模型选择</Text>
+        <Text style={[theme.font("xs"), { color: theme.c.textTertiary, marginTop: 4 }]}>
+          以供应商 profile（baseUrl + API Key + 默认模型）管理，可整体切换供应商；默认模型由后端环境变量给定，可在此覆盖。
+        </Text>
+        <ModelPicker />
       </Card>
 
       <Card>

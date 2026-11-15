@@ -149,6 +149,18 @@ export class AvatarApp {
     if (level === 0 || level === 1) {
       const stage = new Live2DStage(this.root);
       this.live2d = stage;
+      stage.onRecovered = (recovered, err) => {
+        if (recovered) return;
+        // Only a post-loss rebuild that cannot come back up falls through;
+        // transient per-frame/audio errors do not reach this path.
+        this.reportError(
+          "MODEL_RECOVERY_FAILED",
+          err?.message ?? "Live2D engine did not recover after context loss",
+          false,
+        );
+        this.teardownRenderer();
+        this.ensureCanvas(2);
+      };
       const ok = await stage.init();
       if (ok) {
         this.renderer = stage;
@@ -200,7 +212,7 @@ export class AvatarApp {
   // ---------------------------------------------------------------------------
 
   private onStateChange(state: AvatarState): void {
-    this.renderer?.applyStatePosture(state);
+    this.guardRenderer(() => this.renderer?.applyStatePosture(state));
     this.onExpression(STATE_EXPRESSION[state]);
   }
 
@@ -209,11 +221,27 @@ export class AvatarApp {
   }
 
   private onExpression(id: ExpressionId): void {
-    this.renderer?.applyExpression(id);
+    this.guardRenderer(() => this.renderer?.applyExpression(id));
   }
 
   private onMotion(id: MotionId): void {
-    this.renderer?.applyMotion(id);
+    this.guardRenderer(() => this.renderer?.applyMotion(id));
+  }
+
+  /**
+   * Isolate renderer-side errors so one bad expression/motion/posture call
+   * cannot take down the bridge or the render loop. Recoverable by design.
+   */
+  private guardRenderer(action: () => void): void {
+    try {
+      action();
+    } catch (err) {
+      this.reportError(
+        "RENDERER_TRANSIENT",
+        err instanceof Error ? err.message : String(err),
+        true,
+      );
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -283,21 +311,31 @@ export class AvatarApp {
   private startMetrics(): void {
     let last = performance.now();
     const frame = (): void => {
-      // Mouth amplitude: analyser RMS or fallback envelope, with attack/release smoothing.
-      const target = this.speaking ? this.audio.currentAmplitude() : 0;
-      const attack = target > this.mouth ? 0.35 : 0.16;
-      this.mouth += (target - this.mouth) * attack;
-      if (this.mouth < 0.02) this.mouth = 0;
-      this.renderer?.setMouth(this.mouth);
+      try {
+        // Mouth amplitude: analyser RMS or fallback envelope, with attack/release smoothing.
+        const target = this.speaking ? this.audio.currentAmplitude() : 0;
+        const attack = target > this.mouth ? 0.35 : 0.16;
+        this.mouth += (target - this.mouth) * attack;
+        if (this.mouth < 0.02) this.mouth = 0;
+        this.guardRenderer(() => this.renderer?.setMouth(this.mouth));
 
-      this.fpsFrames += 1;
-      const now = performance.now();
-      if (now - last >= 1000) {
-        this.fps = Math.round((this.fpsFrames * 1000) / (now - last));
-        this.fpsFrames = 0;
-        last = now;
+        this.fpsFrames += 1;
+        const now = performance.now();
+        if (now - last >= 1000) {
+          this.fps = Math.round((this.fpsFrames * 1000) / (now - last));
+          this.fpsFrames = 0;
+          last = now;
+        }
+      } catch (err) {
+        this.reportError(
+          "FRAME_TRANSIENT",
+          err instanceof Error ? err.message : String(err),
+          true,
+        );
+      } finally {
+        // Never let one bad frame break the 16 ms scheduling chain.
+        this.metricsTimer = window.setTimeout(frame, 16);
       }
-      this.metricsTimer = window.setTimeout(frame, 16);
     };
     frame();
   }

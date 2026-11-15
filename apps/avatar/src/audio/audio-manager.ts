@@ -30,6 +30,7 @@ export class AudioManager {
 
   private ttsEnabled = true;
   private unlocked = false;
+  private analyserConnected = false;
 
   // Text-rhythm fallback state.
   private fallbackStart = 0;
@@ -99,7 +100,12 @@ export class AudioManager {
       this.mediaSource?.disconnect();
       this.mediaSource = this.context.createMediaElementSource(element);
       this.mediaSource.connect(this.analyser);
-      this.analyser.connect(this.context.destination);
+      // Connect analyser -> destination only once; repeated connect() would
+      // stack extra output connections and grow the audio graph per utterance.
+      if (!this.analyserConnected) {
+        this.analyser.connect(this.context.destination);
+        this.analyserConnected = true;
+      }
 
       this.element = element;
       await element.play();
@@ -182,6 +188,10 @@ export class AudioManager {
       this.element = null;
     }
     this.mediaSource?.disconnect();
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyserConnected = false;
+    }
     this.stopFallback();
   }
 
@@ -193,5 +203,6 @@ export class AudioManager {
     this.context = null;
     this.analyser = null;
     this.mediaSource = null;
+    this.analyserConnected = false;
   }
 }

@@ -5,20 +5,23 @@ interface Props {
   label: string;
   onPress?: () => void;
   active?: boolean;
+  disabled?: boolean;
 }
 
-export function Chip({ label, onPress, active }: Props) {
+export function Chip({ label, onPress, active, disabled }: Props) {
   const theme = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
         {
           backgroundColor: active ? theme.c.primarySoft : theme.c.surface,
           borderColor: active ? theme.c.primary : theme.c.border,
-          opacity: pressed ? 0.85 : 1,
+          opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
         },
       ]}
     >

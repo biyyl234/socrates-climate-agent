@@ -132,7 +132,7 @@ export class OpenAICompatibleLlm implements LlmAdapter {
     };
     if (options.tools && options.tools.length > 0) {
       body.tools = toOpenAiTools(options.tools);
-      body.tool_choice = "auto";
+      body.tool_choice = options.toolChoice ?? "auto";
     }
 
     let lastError: unknown;

@@ -41,12 +41,24 @@ export class ProtocolBridge {
   }
 
   /**
-   * Send an avatar->app event envelope to the parent window.
-   * In a top-level preview (no parent), post back to this window so local
-   * smoke tests still observe the message.
+   * Send an avatar->app event envelope to the host.
+   *
+   * In a react-native-webview top-level page the bridge object
+   * `window.ReactNativeWebView` is injected; its `postMessage` only forwards a
+   * string payload to the native `onMessage`, so the envelope is serialized
+   * there. In an iframe (web shell) or a standalone local preview there is no
+   * such bridge: post the structured envelope to the parent window, or back to
+   * this window so local smoke tests still observe the message.
    */
   send(message: AvatarToApp): void {
     const envelope = wrap(message);
+    const rnWebView = (
+      window as { ReactNativeWebView?: { postMessage: (data: string) => void } }
+    ).ReactNativeWebView;
+    if (rnWebView) {
+      rnWebView.postMessage(JSON.stringify(envelope));
+      return;
+    }
     const target: Window = window.parent && window.parent !== window ? window.parent : window;
     target.postMessage(envelope, "*");
   }

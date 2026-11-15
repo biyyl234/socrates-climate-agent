@@ -40,7 +40,7 @@ export function statusForCode(code: string): number {
 export const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-session-id",
+    "authorization, x-client-info, apikey, content-type, x-session-id, x-llm-model",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 

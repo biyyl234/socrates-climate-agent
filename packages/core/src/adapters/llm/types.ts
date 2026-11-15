@@ -32,6 +32,8 @@ export interface LlmToolSpec {
 export interface CompletionOptions {
   messages: ChatMessage[];
   tools?: LlmToolSpec[];
+  /** Controls whether the model must emit a tool call (OpenAI tool_choice). Defaults to "auto". */
+  toolChoice?: "auto" | "required" | "none";
   /** Abort the in-flight request. */
   signal?: AbortSignal;
   /** Wall-clock timeout in ms; defaults come from the adapter config. */

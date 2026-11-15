@@ -3,6 +3,9 @@
  * Loaded directly by the web page and by the native App's WebView from the same
  * URL, so behavior must be identical across both hosts.
  */
+// Install the file:// XHR fetch fallback before any renderer module loads.
+// No-op on http(s) and every non-file origin.
+import "./renderer/file-fetch-shim";
 import { AvatarApp } from "./avatar-app";
 
 const root = document.getElementById("avatar-root");
