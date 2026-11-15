@@ -1,0 +1,8 @@
+{
+  "note": "No TTS credentials -> resilient NoTTS subtitle fallback",
+  "status": 200,
+  "content_type": [
+    "text/event-stream; charset=utf-8"
+  ],
+  "body": "event: tts_done\ndata: {\"seq_total\":0,\"characters\":25,\"voice\":\"none\",\"provider\":\"none\",\"available\":false,\"subtitle\":\"我们先看看两份套餐的差异，再聊你愿意尝试的小改变。\",\"format\":\"audio/mp3\"}\n\n"
+}

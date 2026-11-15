@@ -5,6 +5,8 @@ node_modules/
 # Build outputs
 dist/
 build/
+# Keep the hand-written Edge Function bundle source (not a generated output)
+!packages/supabase/build/
 *.tsbuildinfo
 .expo/
 dist-export/

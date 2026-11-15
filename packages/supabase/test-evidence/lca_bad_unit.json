@@ -1,0 +1,8 @@
+{
+  "note": "Bad unit -> INVALID_PAYLOAD",
+  "status": 400,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"error\":{\"code\":\"INVALID_PAYLOAD\",\"message\":\"请求字段不满足 schema\",\"details\":[{\"field\":\"unit\",\"reason\":\"unit must be one of meal, bottle, can, pack, item, g, ml\"}],\"retry_after\":null}}"
+}

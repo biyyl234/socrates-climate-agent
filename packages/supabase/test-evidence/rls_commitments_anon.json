@@ -1,0 +1,8 @@
+{
+  "note": "Personal table anonymous select must be empty",
+  "status": 200,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "[]"
+}

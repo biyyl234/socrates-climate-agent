@@ -1,0 +1,8 @@
+{
+  "note": "Unknown barcode -> PRODUCT_NOT_FOUND",
+  "status": 404,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"error\":{\"code\":\"PRODUCT_NOT_FOUND\",\"message\":\"条码在外部源与本地快照均无匹配\",\"details\":[{\"field\":\"barcode\",\"reason\":\"0000000000000\"}],\"retry_after\":null}}"
+}

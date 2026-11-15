@@ -1,0 +1,8 @@
+{
+  "note": "Single item -> INVALID_PAYLOAD",
+  "status": 400,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"error\":{\"code\":\"INVALID_PAYLOAD\",\"message\":\"请求字段不满足 schema\",\"details\":[{\"field\":\"items\",\"reason\":\"对比至少需要 2 项\"}],\"retry_after\":null}}"
+}

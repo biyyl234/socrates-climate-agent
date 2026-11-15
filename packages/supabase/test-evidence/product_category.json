@@ -1,0 +1,8 @@
+{
+  "note": "Local snapshot category lookup",
+  "status": 200,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"matched\":false,\"source\":\"local_snapshot\",\"product\":null,\"products\":[],\"suggestion\":\"本地快照无该品类产品；请用文字描述产品名称、配料与包装规格\"}"
+}

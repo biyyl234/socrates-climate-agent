@@ -1,0 +1,8 @@
+{
+  "note": "No consent flag -> consent_recorded=false",
+  "status": 200,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"commitment_id\":\"a06b98e1-7623-413e-965e-d47dbe1c32ea\",\"created_at\":\"2026-11-15T08:08:18.844Z\",\"follow_up_due\":\"2026-11-29T08:08:18.844Z\",\"status\":\"active\",\"consent_recorded\":false}"
+}

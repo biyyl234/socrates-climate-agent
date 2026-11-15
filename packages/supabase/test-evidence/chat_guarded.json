@@ -1,0 +1,8 @@
+{
+  "note": "Hard sensitive topic -> GUARDED; events: state, state, token, done",
+  "status": 200,
+  "content_type": [
+    "text/event-stream; charset=utf-8"
+  ],
+  "body": "event: state\ndata: {\"session_id\":\"sess_mwhjyhge_oy5eq7\",\"mi_state\":\"WELCOME\",\"turn\":1}\n\nevent: state\ndata: {\"session_id\":\"sess_mwhjyhge_oy5eq7\",\"mi_state\":\"GUARDED\",\"turn\":1}\n\nevent: token\ndata: {\"delta\":\"这个话题不在我们今天校园消费选择的范围里，我们回到餐食或包装上来吧。\"}\n\nevent: done\ndata: {\"finish_reason\":\"blocked\",\"turn\":1}\n\n"
+}

@@ -1,0 +1,8 @@
+{
+  "note": "Same functional unit compare with overlap judgment, ranking, 5R",
+  "status": 200,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"functional_unit\":\"1 份标准食堂套餐（350 g）\",\"items\":[{\"index\":0,\"label\":\"牛肉套餐\",\"footprint\":{\"value\":10.8685,\"unit\":\"kgCO2e\",\"interval\":[13.6256,15.8093]},\"dq\":\"D\"},{\"index\":1,\"label\":\"素食套餐\",\"footprint\":{\"value\":1.1839,\"unit\":\"kgCO2e\",\"interval\":[1.5199,1.7667]},\"dq\":\"D\"}],\"overlap\":false,\"ranking\":[{\"index\":1,\"level\":\"Reduce\",\"score\":0.8911,\"note\":\"同功能单位下区间下限仍高于对比项上限\"},{\"index\":0,\"level\":\"Reduce\",\"score\":0,\"note\":\"同功能单位下区间下限仍高于对比项上限\"}],\"five_r\":[{\"step\":\"Refuse\",\"available\":false,\"note\":\"本场景无拒绝项\"},{\"step\":\"Reduce\",\"available\":true,\"note\":\"选择更低排放的植物源菜品或减量\"},{\"step\":\"Reuse\",\"available\":true,\"note\":\"自带可重复餐具/杯具\"},{\"step\":\"Recycle\",\"available\":true,\"note\":\"剩余包装按校园回收流处置\"},{\"step\":\"Rot\",\"available\":true,\"note\":\"餐余投入厨余/堆肥回收点\"}],\"alternatives\":[{\"category_id\":\"packaging_reusable\",\"label\":\"自带餐盒\"}],\"caveats\":[\"区间存在重叠时不宣称绝对优劣。\",\"地理与季节差异未完全纳入。\",\"区间为保守包络估计：各阶段下限、上限分别求和，未做对数正态传播（报告 §8.5）。\",\"未覆盖阶段：加工、运输、使用、末端处置。\",\"区间为保守包络估计：各阶段下限、上限分别求和，未做对数正态传播（报告 §8.5）。\",\"未覆盖阶段：加工、运输、使用、末端处置。\"]}"
+}

@@ -1,0 +1,8 @@
+{
+  "note": "self_efficacy=9 -> INVALID_PAYLOAD",
+  "status": 400,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"error\":{\"code\":\"INVALID_PAYLOAD\",\"message\":\"请求字段不满足 schema\",\"details\":[{\"field\":\"self_efficacy\",\"reason\":\"self_efficacy must be an integer 1–5\"}],\"retry_after\":null}}"
+}

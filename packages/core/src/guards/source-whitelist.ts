@@ -18,6 +18,10 @@ export const SOURCE_DOMAIN_WHITELIST: ReadonlySet<string> = new Set([
   // Open Food Facts
   "world.openfoodfacts.org",
   "images.openfoodfacts.org",
+  // First-version factor sources registered in packages/data (sources.ts)
+  "ourworldindata.org", // Poore & Nemecek 2018 OWID grapher mirror
+  "nems.nih.gov", // NEMS PET bottled-water review (www.nems.nih.gov)
+  "oregon.gov", // Franklin Associates / Oregon DEQ 2009 (www.oregon.gov)
   // Boavizta (reserved, not in first-version main path)
   "doc.api.boavizta.org",
   "github.com",

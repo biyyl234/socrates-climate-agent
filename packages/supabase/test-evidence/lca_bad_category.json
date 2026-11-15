@@ -1,0 +1,8 @@
+{
+  "note": "Unknown category -> INVALID_PAYLOAD",
+  "status": 400,
+  "content_type": [
+    "application/json; charset=utf-8"
+  ],
+  "body": "{\"error\":{\"code\":\"INVALID_PAYLOAD\",\"message\":\"非法品类码：nope\",\"details\":[{\"field\":\"category_id\",\"reason\":\"nope\"}],\"retry_after\":null}}"
+}
