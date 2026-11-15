@@ -5,7 +5,7 @@
  * this stage through high-level methods (expression / motion / mouth / posture),
  * so the plugin can be swapped without touching protocol or app orchestration.
  */
-import { Application, Ticker, type Container } from "pixi.js";
+import { Application, Assets, Ticker, type Container } from "pixi.js";
 import {
   Live2DModel,
   MotionPriority,
@@ -51,6 +51,49 @@ export class Live2DStage {
   }
 
   /**
+   * Disable Pixi's Web Worker texture decode when the page is loaded over
+   * file:// (Android WebView). Pixi's `loadTextures` parser defaults to
+   * `preferWorkers: true` and the WorkerManager fetches textures inside a Web
+   * Worker using its own native `fetch`, which cannot load `file://` URLs and is
+   * not covered by the main-thread XHR shim. Turning the worker off keeps image
+   * decoding on the main thread, where `fetch` is the shim and file loads work.
+   *
+   * http(s) pages are untouched: workers remain enabled there and the model
+   * loads exactly as before.
+   */
+  private configureTextureParser(): void {
+    if (location.protocol !== "file:") return;
+    type TextureParserConfig = {
+      preferWorkers?: boolean;
+      preferCreateImageBitmap?: boolean;
+      crossOrigin?: string;
+    };
+    type TextureParser = {
+      id?: string;
+      name?: string;
+      config?: TextureParserConfig;
+    };
+    const parsers = (Assets as unknown as { loader?: { parsers?: TextureParser[] } }).loader
+      ?.parsers;
+    if (!Array.isArray(parsers)) {
+      // eslint-disable-next-line no-console
+      console.warn("[Live2DStage] texture parser list unavailable; worker path not reconfigured");
+      return;
+    }
+    const parser = parsers.find(
+      (p) => p?.id === "texture" || p?.name === "loadTextures",
+    );
+    if (!parser?.config) {
+      // eslint-disable-next-line no-console
+      console.warn("[Live2DStage] loadTextures parser not found; worker path not reconfigured");
+      return;
+    }
+    parser.config.preferWorkers = false;
+    parser.config.preferCreateImageBitmap = true;
+    parser.config.crossOrigin = "anonymous";
+  }
+
+  /**
    * Initialize the Pixi application and load the model.
    * Resolves true on success; sets `loadError` and resolves false otherwise.
    */
@@ -69,6 +112,7 @@ export class Live2DStage {
   private async createEngine(): Promise<boolean> {
     try {
       this.loadError = null;
+      this.configureTextureParser();
       const app = new Application();
       await app.init({
         canvas: document.createElement("canvas"),
