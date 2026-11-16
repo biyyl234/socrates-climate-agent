@@ -13,7 +13,7 @@ import type {
 import { ProtocolBridge } from "./protocol-bridge";
 import { AudioManager, type AudioPlayResult } from "./audio/audio-manager";
 import { StateMachine } from "./state/state-machine";
-import { Live2DStage } from "./renderer/live2d-stage";
+import { SocratesStage } from "./renderer/socrates-stage";
 import { CanvasFallback } from "./renderer/canvas-fallback";
 import { STATE_EXPRESSION, capabilitiesForLevel } from "./config";
 
@@ -38,6 +38,7 @@ export class AvatarApp {
   private readonly machine = new StateMachine();
 
   private live2d: Live2DStage | null = null;
+  private socrates: SocratesStage | null = null;
   private fallback: CanvasFallback | null = null;
   private renderer: ActiveRenderer | null = null;
 
@@ -147,31 +148,16 @@ export class AvatarApp {
     this.teardownRenderer();
 
     if (level === 0 || level === 1) {
-      const stage = new Live2DStage(this.root);
-      this.live2d = stage;
-      stage.onRecovered = (recovered, err) => {
-        if (recovered) return;
-        // Only a post-loss rebuild that cannot come back up falls through;
-        // transient per-frame/audio errors do not reach this path.
-        this.reportError(
-          "MODEL_RECOVERY_FAILED",
-          err?.message ?? "Live2D engine did not recover after context loss",
-          false,
-        );
-        this.teardownRenderer();
-        this.ensureCanvas(2);
-      };
+      const stage = new SocratesStage(this.root);
+      this.socrates = stage;
       const ok = await stage.init();
       if (ok) {
         this.renderer = stage;
-        stage.onHit = (area, x, y) => {
-          this.bridge.send({ type: "hit", payload: { hitArea: area, x, y } });
-        };
         return;
       }
-      // Live2D failed: record the fault and fall through to the Canvas layer.
-      this.reportError("MODEL_LOAD_FAILED", stage.error?.message ?? "Live2D model failed to load", true);
-      this.live2d = null;
+      // Image failed: record the fault and fall through to the Canvas layer.
+      this.reportError("MODEL_LOAD_FAILED", "Socrates portrait failed to load", true);
+      this.socrates = null;
       return this.ensureCanvas(2);
     }
     return this.ensureCanvas(level as 2 | 3 | 4);
@@ -199,6 +185,8 @@ export class AvatarApp {
     this.renderer = null;
     this.live2d?.dispose();
     this.live2d = null;
+    this.socrates?.dispose();
+    this.socrates = null;
     this.fallback?.dispose();
     this.fallback = null;
   }

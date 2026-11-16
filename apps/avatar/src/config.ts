@@ -13,9 +13,15 @@ import type {
   MotionId,
 } from "@socrates/core";
 
+/**
+ * Primary avatar: an illustrated Socrates portrait (Canvas 2D image stage).
+ * Haru remains in the tree as a legacy Live2D option and offline reference.
+ */
+export const SOCRATES_IMAGE_URL = "./socrates/socrates.png";
+export const MODEL_ID = "socrates";
+
 /** Haru (Cubism 3/4 compatible) free sample model, bundled under public/live2d. */
 export const MODEL_URL = "./live2d/Haru/Haru.model3.json";
-export const MODEL_ID = "haru";
 
 /**
  * Protocol expression id -> Haru expression file name.
@@ -50,8 +56,8 @@ export const STATE_EXPRESSION: Record<AvatarState, ExpressionId> = {
 /**
  * Degradation ladder (§2.8.7, mapped to the five levels exposed by the protocol):
  *
- * - L0 完整 Live2D+TTS:  Live2D model + TTS audio + amplitude lip sync + full automations
- * - L1 振幅口型:          Live2D model kept; mouth driven by amplitude only; no TTS audio
+ * - L0 苏格拉底立绘+TTS: illustrated Socrates + TTS audio + amplitude mouth + idle/gesture motion
+ * - L1 振幅口型:          Socrates portrait kept; mouth driven by amplitude only; no TTS audio
  * - L2 静态立绘+轻动效:   Canvas-drawn portrait with breathing / blink; audio allowed
  * - L3 简化角色:          Geometric Canvas character, basic state cues; no audio
  * - L4 纯文字:            Text bubble overlay only; no character, no audio
@@ -59,9 +65,9 @@ export const STATE_EXPRESSION: Record<AvatarState, ExpressionId> = {
 export function capabilitiesForLevel(level: AvatarLevel): AvatarCapabilities {
   switch (level) {
     case 0:
-      return { live2d: true, tts: true, amplitudeLipSync: true, lottie: false, modelId: MODEL_ID };
+      return { live2d: false, tts: true, amplitudeLipSync: true, lottie: false, modelId: MODEL_ID };
     case 1:
-      return { live2d: true, tts: false, amplitudeLipSync: true, lottie: false, modelId: MODEL_ID };
+      return { live2d: false, tts: false, amplitudeLipSync: true, lottie: false, modelId: MODEL_ID };
     case 2:
       return { live2d: false, tts: true, amplitudeLipSync: false, lottie: true, modelId: null };
     case 3:
