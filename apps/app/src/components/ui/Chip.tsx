@@ -8,6 +8,14 @@ interface Props {
   disabled?: boolean;
 }
 
+function rgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export function Chip({ label, onPress, active, disabled }: Props) {
   const theme = useTheme();
   return (
@@ -19,8 +27,10 @@ export function Chip({ label, onPress, active, disabled }: Props) {
       style={({ pressed }) => [
         styles.chip,
         {
-          backgroundColor: active ? theme.c.primarySoft : theme.c.surface,
-          borderColor: active ? theme.c.primary : theme.c.border,
+          backgroundColor: rgba(active ? theme.c.primarySoft : theme.c.surface, 0.5),
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          borderColor: rgba(active ? theme.c.primary : theme.c.border, 0.7),
           opacity: disabled ? 0.45 : pressed ? 0.85 : 1,
         },
       ]}

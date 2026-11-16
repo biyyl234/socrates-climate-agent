@@ -21,6 +21,12 @@ export const env = {
   avatarUrl: clean(process.env.EXPO_PUBLIC_AVATAR_URL),
   /** Locale hint sent to the avatar and backend. */
   locale: clean(process.env.EXPO_PUBLIC_LOCALE) || "zh-CN",
+  /**
+   * Optional same-origin chat endpoint (e.g. "/api/chat"), used when the web
+   * build runs the backend as a Vercel serverless function. Empty = use the
+   * configured Supabase function.
+   */
+  chatEndpoint: clean(process.env.EXPO_PUBLIC_CHAT_ENDPOINT),
 } as const;
 
 export const backendConfigured: boolean = env.supabaseUrl.length > 0;

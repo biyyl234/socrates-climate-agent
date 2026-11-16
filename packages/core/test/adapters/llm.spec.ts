@@ -144,4 +144,78 @@ describe("OpenAI-compatible adapter", () => {
     await llm.complete({ messages: [{ role: "user", content: "hi" }], onToken: spy });
     expect(spy).toHaveBeenCalledWith("");
   });
+
+  it("retries after its own per-attempt timeout and then succeeds", async () => {
+    let calls = 0;
+    const fakeFetch = (async (_url: unknown, init: { signal: AbortSignal }) => {
+      calls += 1;
+      if (calls === 1) {
+        // Mimic real fetch: reject with AbortError once the timer aborts.
+        await new Promise((_resolve, reject) => {
+          init.signal.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        });
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [
+            {
+              message: { role: "assistant", content: "重试成功" },
+              finish_reason: "stop",
+            },
+          ],
+        }),
+      };
+    }) as unknown as typeof fetch;
+
+    const llm = new OpenAICompatibleLlm({
+      provider: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      apiKey: "k",
+      model: "m",
+      fetchImpl: fakeFetch,
+    });
+
+    const result = await llm.complete({
+      messages: [{ role: "user", content: "hi" }],
+      timeoutMs: 50,
+    });
+    expect(calls).toBe(2);
+    expect(result.content).toBe("重试成功");
+  });
+
+  it("does not retry when the caller aborts from outside", async () => {
+    let calls = 0;
+    const fakeFetch = (async (_url: unknown, init: { signal: AbortSignal }) => {
+      calls += 1;
+      await new Promise((_resolve, reject) => {
+        init.signal.addEventListener("abort", () => {
+          reject(new DOMException("Aborted", "AbortError"));
+        });
+      });
+      return { ok: true };
+    }) as unknown as typeof fetch;
+
+    const llm = new OpenAICompatibleLlm({
+      provider: "openai",
+      baseUrl: "https://api.openai.com/v1",
+      apiKey: "k",
+      model: "m",
+      fetchImpl: fakeFetch,
+    });
+
+    const outer = new AbortController();
+    const pending = llm.complete({
+      messages: [{ role: "user", content: "hi" }],
+      signal: outer.signal,
+      timeoutMs: 5000,
+    });
+    setTimeout(() => outer.abort(), 30);
+
+    await expect(pending).rejects.toThrow(LlmError);
+    expect(calls).toBe(1);
+  });
 });

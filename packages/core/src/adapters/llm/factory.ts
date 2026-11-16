@@ -23,6 +23,12 @@ export interface LlmFactoryConfig {
 
 type EnvSource = Record<string, string | undefined>;
 
+function parsePositiveInt(raw: string | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
 const PROVIDER_DEFAULTS: Record<string, string> = {
   deepseek: "https://api.deepseek.com",
   openai: "https://api.openai.com/v1",
@@ -51,7 +57,7 @@ export function createLlmAdapter(
     baseUrl,
     apiKey,
     model,
-    timeoutMs: config.timeoutMs,
-    maxRetries: config.maxRetries,
+    timeoutMs: config.timeoutMs ?? parsePositiveInt(env.LLM_TIMEOUT_MS),
+    maxRetries: config.maxRetries ?? parsePositiveInt(env.LLM_MAX_RETRIES),
   });
 }

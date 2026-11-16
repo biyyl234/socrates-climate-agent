@@ -11,13 +11,36 @@ interface Props {
 
 const SEGMENT_COLORS = ["#2F5D50", "#9DB8A3", "#C97B5A", "#E8DFCF", "#4A7FA6", "#7FAF9E"];
 
+function rgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Frosted card: blur on web, translucent rgba fallback on native. */
+function frost(color: string, alpha: number) {
+  return {
+    backgroundColor: rgba(color, alpha),
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+  };
+}
+
 export function FootprintCard({ result }: Props) {
   const theme = useTheme();
   const [showSources, setShowSources] = useState(false);
   const total = result.total.value;
 
   return (
-    <View style={[styles.card, { borderColor: theme.c.border, backgroundColor: theme.c.surface }]}>
+    <View
+      style={[
+        styles.card,
+        frost(theme.c.surface, 0.55),
+        { borderColor: rgba(theme.c.border, 0.7) },
+      ]}
+    >
       <View style={styles.header}>
         <Text style={[theme.font("md"), { color: theme.c.textPrimary, flex: 1 }]}>
           {result.functional_unit}

@@ -13,9 +13,19 @@ function rgba(hex: string, alpha: number): string {
 function frost(color: string, alpha: number): ViewStyle {
   return {
     backgroundColor: rgba(color, alpha),
-    backdropFilter: "blur(12px)",
-    WebkitBackdropFilter: "blur(12px)",
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
   } as ViewStyle;
+}
+
+/** Halo behind text so it stays legible over the character; adapts to scheme. */
+function textHalo(scheme: "light" | "dark") {
+  return {
+    textShadowColor:
+      scheme === "dark" ? "rgba(0, 0, 0, 0.85)" : "rgba(255, 255, 255, 0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  } as const;
 }
 import type { ChatMessage } from "../../types/chat";
 import { FootprintCard } from "./FootprintCard";
@@ -37,10 +47,10 @@ export function MessageBubble({ message, onAcceptCommitment }: Props) {
       <View
         style={[
           styles.bubble,
-          frost(isUser ? theme.c.secondarySoft : theme.c.surface, isUser ? 0.9 : 0.86),
+          frost(isUser ? theme.c.secondarySoft : theme.c.surface, isUser ? 0.55 : 0.5),
           {
             maxWidth: theme.isWide ? "72%" : "92%",
-            borderColor: theme.c.border,
+            borderColor: rgba(theme.c.border, 0.7),
           },
         ]}
       >
@@ -48,6 +58,7 @@ export function MessageBubble({ message, onAcceptCommitment }: Props) {
           <Text
             style={[
               theme.font("base"),
+              textHalo(theme.scheme),
               { color: theme.c.textPrimary, lineHeight: 25 },
             ]}
           >

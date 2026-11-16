@@ -95,9 +95,13 @@ export async function streamChat(req: ChatRequest, handlers: SseHandlers): Promi
   const selectedModel = getSelectedModelSync();
   if (selectedModel) headers["X-LLM-Model"] = selectedModel;
 
+  // Same-origin serverless override when configured (web), otherwise the
+  // configured Supabase Edge Function.
+  const chatUrl = env.chatEndpoint || backendUrl(ENDPOINTS.chat);
+
   let response: Response;
   try {
-    response = await fetch(backendUrl(ENDPOINTS.chat), {
+    response = await fetch(chatUrl, {
       method: "POST",
       headers,
       body: JSON.stringify(req),

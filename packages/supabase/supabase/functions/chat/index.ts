@@ -1187,7 +1187,7 @@ var LlmError = class extends Error {
 };
 
 // ../core/src/adapters/llm/openai-compatible.ts
-var DEFAULT_TIMEOUT_MS = 8e3;
+var DEFAULT_TIMEOUT_MS = 15e3;
 var DEFAULT_MAX_RETRIES = 2;
 function normalizeMessages(messages) {
   return messages.map((msg) => {
@@ -1326,13 +1326,20 @@ var OpenAICompatibleLlm = class {
       } catch (error) {
         if (error instanceof LlmError) throw error;
         if (error instanceof DOMException && error.name === "AbortError") {
-          const timedOut = !options.signal?.aborted;
-          throw new LlmError(
-            timedOut ? "timeout" : "unavailable",
-            timedOut ? `LLM request timed out after ${timeoutMs}ms` : "LLM request aborted",
+          if (options.signal?.aborted) {
+            throw new LlmError("unavailable", "LLM request aborted", void 0, error);
+          }
+          lastError = new LlmError(
+            "timeout",
+            `LLM request timed out after ${timeoutMs}ms`,
             void 0,
             error
           );
+          if (attempt < maxRetries) {
+            await sleep(300 * 2 ** attempt, options.signal).catch(() => void 0);
+            continue;
+          }
+          throw lastError;
         }
         lastError = error;
         if (attempt < maxRetries) {
@@ -1419,6 +1426,11 @@ var MockLlm = class {
 };
 
 // ../core/src/adapters/llm/factory.ts
+function parsePositiveInt(raw) {
+  if (raw === void 0) return void 0;
+  const value = Number.parseInt(raw, 10);
+  return Number.isFinite(value) && value > 0 ? value : void 0;
+}
 var PROVIDER_DEFAULTS = {
   deepseek: "https://api.deepseek.com",
   openai: "https://api.openai.com/v1",
@@ -1439,8 +1451,8 @@ function createLlmAdapter(config = {}, env = process.env) {
     baseUrl,
     apiKey,
     model,
-    timeoutMs: config.timeoutMs,
-    maxRetries: config.maxRetries
+    timeoutMs: config.timeoutMs ?? parsePositiveInt(env.LLM_TIMEOUT_MS),
+    maxRetries: config.maxRetries ?? parsePositiveInt(env.LLM_MAX_RETRIES)
   });
 }
 

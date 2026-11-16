@@ -8,12 +8,34 @@ interface Props {
   result: CompareResult;
 }
 
+function rgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function frost(color: string, alpha: number) {
+  return {
+    backgroundColor: rgba(color, alpha),
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+  };
+}
+
 export function CompareCard({ result }: Props) {
   const theme = useTheme();
   const maxHigh = Math.max(...result.items.map((i) => i.footprint.interval[1]), 1);
 
   return (
-    <View style={[styles.card, { borderColor: theme.c.border, backgroundColor: theme.c.surface }]}>
+    <View
+      style={[
+        styles.card,
+        frost(theme.c.surface, 0.55),
+        { borderColor: rgba(theme.c.border, 0.7) },
+      ]}
+    >
       <Text style={[theme.font("md"), { color: theme.c.textPrimary }]}>
         同口径对比 · {result.functional_unit}
       </Text>

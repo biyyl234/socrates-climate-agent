@@ -74,10 +74,10 @@ function frost(color: string, alpha: number): ViewStyle {
 function bottomScrim(color: string): ViewStyle {
   if (Platform.OS === "web") {
     return {
-      backgroundImage: `linear-gradient(to top, ${rgba(color, 0.82)} 0%, ${rgba(color, 0)} 100%)`,
+      backgroundImage: `linear-gradient(to top, ${rgba(color, 0.6)} 0%, ${rgba(color, 0)} 100%)`,
     };
   }
-  return { backgroundColor: rgba(color, 0.55) };
+  return { backgroundColor: rgba(color, 0.4) };
 }
 
 export default function ChatScreen() {
@@ -377,8 +377,8 @@ export default function ChatScreen() {
               <View
                 style={[
                   styles.inputBar,
-                  frost(theme.c.surfaceAlt, 0.82),
-                  { borderColor: theme.c.border },
+                  frost(theme.c.surfaceAlt, 0.6),
+                  { borderColor: rgba(theme.c.border, 0.7) },
                 ]}
               >
                 <TextInput

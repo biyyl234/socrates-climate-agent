@@ -28,7 +28,10 @@ export interface OpenAICompatibleConfig {
   fetchImpl?: typeof fetch;
 }
 
-const DEFAULT_TIMEOUT_MS = 8000; // report §6.3: first-token budget 8s
+// Report §6.3 targets an 8s first-token budget, but the shared gateway has
+// shown real end-to-end latency of 6–14s on this model. A 15s default avoids
+// spurious timeouts; override with LLM_TIMEOUT_MS and the factory wires it in.
+const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_MAX_RETRIES = 2;
 
 interface OpenAIToolCall {
@@ -207,13 +210,22 @@ export class OpenAICompatibleLlm implements LlmAdapter {
       } catch (error) {
         if (error instanceof LlmError) throw error;
         if (error instanceof DOMException && error.name === "AbortError") {
-          const timedOut = !options.signal?.aborted;
-          throw new LlmError(
-            timedOut ? "timeout" : "unavailable",
-            timedOut ? `LLM request timed out after ${timeoutMs}ms` : "LLM request aborted",
+          // An outer (caller) abort is a real cancellation — never retry it.
+          if (options.signal?.aborted) {
+            throw new LlmError("unavailable", "LLM request aborted", undefined, error);
+          }
+          // Our own per-attempt timeout: back off and retry while attempts remain.
+          lastError = new LlmError(
+            "timeout",
+            `LLM request timed out after ${timeoutMs}ms`,
             undefined,
             error,
           );
+          if (attempt < maxRetries) {
+            await sleep(300 * 2 ** attempt, options.signal).catch(() => undefined);
+            continue;
+          }
+          throw lastError;
         }
         lastError = error;
         if (attempt < maxRetries) {
